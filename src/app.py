@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from constants import Topic
 
 app = FastAPI()
 
@@ -13,6 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class Ingestion(BaseModel):
+    url: str
+    topic: Topic
 
 @app.post("/api/math-faculty")
 async def math_faculty(data: dict):
@@ -33,3 +37,9 @@ async def qa(data: dict):
 async def romanian_culture(data: dict):
     print("Received data:", data)
     return {"status": "success", "data_received": data}
+
+
+@app.post("/api/ingestion-job")
+async def ingestion_job(ingestionData: Ingestion):
+    print("Received data:", ingestionData)
+    return {"status": "success", "data_received": ingestionData}
