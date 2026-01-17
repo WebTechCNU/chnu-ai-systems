@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from constants import Topic
+from models.constants import Topic
+from models.models import IngestionRequest, QARequest, MathFacultyRequest, RomanianCultureRequest, LocationsRequest
 
 app = FastAPI()
 
@@ -14,32 +15,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Ingestion(BaseModel):
-    url: str
-    topic: Topic
-
 @app.post("/api/math-faculty")
-async def math_faculty(data: dict):
-    print("Received data:", data)
-    return {"status": "success", "data_received": data}
+async def math_faculty(request: MathFacultyRequest):
+    print("Received data:", request)
+    return {"status": "success", "data_received": request}
 
 @app.post("/api/locations")
-async def locations(data: dict):
-    print("Received data:", data)
-    return {"status": "success", "data_received": data}
+async def locations(request: LocationsRequest):
+    print("Received data:", request)
+    return {"status": "success", "data_received": request}
 
 @app.post("/api/qa")
-async def qa(data: dict):
-    print("Received data:", data)
-    return {"status": "success", "data_received": data}
+async def qa(request: QARequest):
+    print("Received data:", request)
+    return {"status": "success", "data_received": request}
 
 @app.post("/api/romanian-culture")
-async def romanian_culture(data: dict):
-    print("Received data:", data)
-    return {"status": "success", "data_received": data}
+async def romanian_culture(request: RomanianCultureRequest):
+    print("Received data:", request)
+    return {"status": "success", "data_received": request}
 
 
 @app.post("/api/ingestion-job")
-async def ingestion_job(ingestionData: Ingestion):
+async def ingestion_job(ingestionData: IngestionRequest):
     print("Received data:", ingestionData)
     return {"status": "success", "data_received": ingestionData}
