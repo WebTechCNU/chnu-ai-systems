@@ -23,6 +23,7 @@ Dialectical language, history etc.
 
 - Helper for QA API testing: we provide api endpoint of application (+ token), app makes requests, response+logs get analysed in rag pipeline
 - Find best option for application (cheapest deploy)
+- Rules for QA 
 - https://true-price.top/ ???
 
 ## Location helper (Olia)
