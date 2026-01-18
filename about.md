@@ -21,14 +21,20 @@ Dialectical language, history etc.
 
 ### Testing, QA QC etc. (Liza)
 
-- 
-- 
+- Helper for QA API testing: we provide api endpoint of application (+ token), app makes requests, response+logs get analysed in rag pipeline
+- Find best option for application (cheapest deploy)
+- https://true-price.top/ ???
 
+## Location helper (Olia)
+
+0. Overpass
+1. Retrieve menus for given locations (?)
+2. Menus for rag vectorization + pipeline 
 
 
 ## App architecture:
 
-- Single react app with routing, 3 routes, each route -> module with custom stylings, 
+- Single react app with routing, 4 routes, each route -> module with custom stylings, 
 - Backend with vector database hosted separately 
 - Resitration, login
 
