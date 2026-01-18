@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from matplotlib.pylab import byte
 from pydantic import BaseModel
 from models.constants import Topic
 from models.models import IngestionRequest, QARequest, MathFacultyRequest, RomanianCultureRequest, LocationsRequest
@@ -38,5 +39,10 @@ async def romanian_culture(request: RomanianCultureRequest):
 
 @app.post("/api/ingestion-job")
 async def ingestion_job(ingestionData: IngestionRequest):
+    print("Received data:", ingestionData)
+    return {"status": "success", "data_received": ingestionData}
+
+@app.post("/api/ingestion-text")
+async def ingest_text_data(ingestionData: bytes):
     print("Received data:", ingestionData)
     return {"status": "success", "data_received": ingestionData}
