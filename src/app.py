@@ -1,9 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from matplotlib.pylab import byte
-from pydantic import BaseModel
-from models.constants import Topic
-from models.models import IngestionRequest, QARequest, MathFacultyRequest, RomanianCultureRequest, LocationsRequest
+from infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
+from services.auth import get_db, register_user, login_user, get_current_user
+from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from domain.database import Base, engine
+from domain.entities import User
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -15,6 +19,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
 
 @app.post("/api/math-faculty")
 async def math_faculty(request: MathFacultyRequest):
@@ -46,3 +54,14 @@ async def ingestion_job(ingestionData: IngestionRequest):
 async def ingest_text_data(ingestionData: bytes):
     print("Received data:", ingestionData)
     return {"status": "success", "data_received": ingestionData}
+
+
+@app.post("/api/login")
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
+    data = login_user(request, db)
+    return data
+
+@app.post("/api/register")
+async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    data = register_user(request, db)
+    return data

@@ -1,4 +1,4 @@
-from constants import Topic
+from infrastructure.constants import Topic
 from pydantic import BaseModel
 
 class IngestionRequest(BaseModel):
@@ -23,5 +23,16 @@ class RomanianCultureRequest(BaseModel):
 class LocationsRequest(BaseModel):
     location_name: str
     context: str
+    latitude: float
+    longitude: float
     chat_history: list[str]
 
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"  # "admin" | "user"
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str

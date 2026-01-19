@@ -2,8 +2,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
-from retriever import load_vector_store
-from models.prompt_templates import MATH_FACULTY_GENERAL
+from services.retriever import load_vector_store
+from infrastructure.prompt_templates import MATH_FACULTY_GENERAL
 
 
 vector_store = load_vector_store()
