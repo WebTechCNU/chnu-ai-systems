@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
-from services.auth import get_db, register_user, login_user, get_current_user
+from services import security
+from services.auth import get_db, register_user, login_user, get_current_user, require_role
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from domain.database import Base, engine
 from domain.entities import User
+from services.ingest import initialize_injestion
 
 load_dotenv()
 
@@ -46,8 +48,10 @@ async def romanian_culture(request: RomanianCultureRequest):
 
 
 @app.post("/api/ingestion-job")
-async def ingestion_job(ingestionData: IngestionRequest):
+async def ingestion_job(
+        ingestionData: IngestionRequest, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
+    initialize_injestion(ingestionData.url)
     return {"status": "success", "data_received": ingestionData}
 
 @app.post("/api/ingestion-text")

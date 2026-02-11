@@ -7,6 +7,9 @@ from domain.database import SessionLocal
 from infrastructure.models import LoginRequest, RegisterRequest
 from domain.entities import User
 from services.security import create_access_token, decode_token, verify_password, hash_password
+from dotenv import load_dotenv
+
+load_dotenv()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 

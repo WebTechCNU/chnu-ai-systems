@@ -48,3 +48,9 @@ Dialectical language, history etc.
 
 
 
+## APP
+
+### Running the application:
+
+cd src
+uvicorn app:app --reload

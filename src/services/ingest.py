@@ -5,9 +5,20 @@ from langchain_openai import OpenAIEmbeddings
 import os
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+load_dotenv()
 
 VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH")
 USER_AGENT = os.getenv("USER_AGENT")
+OPEN_API_KEY = os.getenv("OPEN_API_KEY")
+
+# OPEN_API_KEY
+
+def initialize_injestion(url: str): 
+    links = fetch_and_parse_links(url, depth=2)
+    vector_store = ingest_web_content(links, chunk_size=1000)
+    return vector_store
 
 def ingest_web_content(url: list[str], chunk_size: int = 1000): 
     all_texts = []
@@ -25,7 +36,9 @@ def ingest_web_content(url: list[str], chunk_size: int = 1000):
         texts = text_splitter.split_documents(data)
         all_texts.extend(texts)
 
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(
+        api_key=OPEN_API_KEY
+    )
     vector_store = FAISS.from_documents(all_texts, embeddings)
 
     vector_store.save_local(VECTOR_DB_PATH)
@@ -56,3 +69,5 @@ def fetch_and_parse_links(url: str, depth: int) -> list[str]:
         links.extend(new_links)
         links = list(set(links))  # remove duplicates
         i += 1
+
+    return links
