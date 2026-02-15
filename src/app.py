@@ -55,7 +55,7 @@ async def ingestion_job(
     return {"status": "success", "data_received": ingestionData}
 
 @app.post("/api/ingestion-text")
-async def ingest_text_data(ingestionData: bytes):
+async def ingest_text_data(ingestionData: bytes, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
     return {"status": "success", "data_received": ingestionData}
 
