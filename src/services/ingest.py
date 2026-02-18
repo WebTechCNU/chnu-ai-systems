@@ -6,12 +6,16 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 
 VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH")
 USER_AGENT = os.getenv("USER_AGENT")
 OPEN_API_KEY = os.getenv("OPEN_API_KEY")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+VECTOR_DB_PATH = os.path.join(BASE_DIR, VECTOR_DB_PATH) if VECTOR_DB_PATH else os.path.join(BASE_DIR, "vector_store")
 
 # OPEN_API_KEY
 
@@ -42,7 +46,7 @@ def ingest_web_content(url: list[str], chunk_size: int = 1000):
     vector_store = FAISS.from_documents(all_texts, embeddings)
 
     vector_store.save_local(VECTOR_DB_PATH)
-
+    
     return vector_store
 
 

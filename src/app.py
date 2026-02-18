@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
 from services import security
@@ -8,10 +9,22 @@ from sqlalchemy.orm import Session
 from domain.database import Base, engine
 from domain.entities import User
 from services.ingest import initialize_injestion
+from services.retriever import get_vector_store, load_vector_store
+from fastapi import Request
+from services.rag_chain import query
 
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Loading vector store...")
+    app.state.vector_store = load_vector_store()
+    print("Vector store loaded.")
+    yield
+    print("Shutting down...")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS:
 app.add_middleware(
@@ -22,14 +35,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
 @app.post("/api/math-faculty")
-async def math_faculty(request: MathFacultyRequest):
-    print("Received data:", request)
-    return {"status": "success", "data_received": request}
+async def math_faculty(request: MathFacultyRequest, vector_store = Depends(get_vector_store)):
+    result = query(request.question, request.chat_history, vector_store)
+    return {"status": "success", "answer": result}
 
 @app.post("/api/locations")
 async def locations(request: LocationsRequest):
@@ -69,3 +83,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     data = register_user(request, db)
     return data
+
+
+
+

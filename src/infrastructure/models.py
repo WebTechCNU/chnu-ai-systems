@@ -12,7 +12,7 @@ class QARequest(BaseModel):
 
 class MathFacultyRequest(BaseModel):
     question: str
-    context: str
+    # context: str
     chat_history: list[str]
 
 class RomanianCultureRequest(BaseModel):
