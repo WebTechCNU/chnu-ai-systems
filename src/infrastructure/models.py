@@ -14,6 +14,7 @@ class MathFacultyRequest(BaseModel):
     question: str
     # context: str
     chat_history: list[str]
+    # user_status: str
 
 class RomanianCultureRequest(BaseModel):
     question: str
