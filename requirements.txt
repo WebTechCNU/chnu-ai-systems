@@ -12,3 +12,4 @@ Requests==2.33.0
 SQLAlchemy==2.0.48
 uvicorn==0.38.0
 faiss-cpu==1.13.2
+argon2-cffi==25.1.0
