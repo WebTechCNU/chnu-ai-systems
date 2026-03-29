@@ -1,0 +1,12 @@
+beautifulsoup4==4.14.3
+fastapi==0.135.2
+langchain_community==0.4.1
+langchain_core==1.2.23
+langchain_openai==1.1.12
+langchain_text_splitters==1.1.1
+passlib==1.7.4
+pydantic==2.12.5
+python-dotenv==1.2.2
+python_jose==3.5.0
+Requests==2.33.0
+SQLAlchemy==2.0.48
