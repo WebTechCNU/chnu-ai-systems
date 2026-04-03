@@ -14,7 +14,7 @@ class MathFacultyRequest(BaseModel):
     question: str
     # context: str
     chat_history: list[str]
-    # user_status: str
+    user_status: str
 
 class RomanianCultureRequest(BaseModel):
     question: str
@@ -22,10 +22,11 @@ class RomanianCultureRequest(BaseModel):
     chat_history: list[str]
 
 class LocationsRequest(BaseModel):
-    location_name: str
     context: str
     latitude: float
     longitude: float
+    purpose: str
+    radius: int
     chat_history: list[str]
 
 

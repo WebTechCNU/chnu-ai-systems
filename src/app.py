@@ -12,6 +12,7 @@ from services.ingest import initialize_injestion
 from services.retriever import get_vector_store, load_vector_store
 from fastapi import Request
 from services.rag_chain import query
+from services.location_service import get_recommendation_from_ai
 
 load_dotenv()
 
@@ -29,7 +30,7 @@ app = FastAPI(lifespan=lifespan)
 # CORS:
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://webtechcnu.github.io", "http://127.0.0.1:5500", "http://127.0.0.1:5501"],  
+    allow_origins=["https://webtechcnu.github.io", "http://127.0.0.1:5500", "http://127.0.0.1:5501", "http://127.0.0.1:3000"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,8 +48,13 @@ async def math_faculty(request: MathFacultyRequest, vector_store = Depends(get_v
 
 @app.post("/api/locations")
 async def locations(request: LocationsRequest):
-    print("Received data:", request)
-    return {"status": "success", "data_received": request}
+    result = get_recommendation_from_ai(
+        user_lat=request.latitude,
+        user_lon=request.longitude,
+        purpose=request.purpose,
+        radius=request.radius
+    )
+    return {"status": "success", "answer": result}
 
 @app.post("/api/qa")
 async def qa(request: QARequest):
@@ -65,7 +71,7 @@ async def romanian_culture(request: RomanianCultureRequest):
 async def ingestion_job(
         ingestionData: IngestionRequest, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
-    initialize_injestion(ingestionData.url)
+    initialize_injestion(ingestionData.url, ingestionData.topic)
     return {"status": "success", "data_received": ingestionData}
 
 @app.post("/api/ingestion-text")

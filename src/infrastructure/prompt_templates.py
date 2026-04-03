@@ -15,5 +15,6 @@ ROMANIAN_CULTURE_HELPER = ""
 
 QA_HELPER =""
 
-LOCATION_RECOMMENDER =""
+LOCATION_RECOMMENDER = """На основі наступних даних, дай відповідь на запитання користувача. 
+    Не кажи слово 'опис'! Будь-ласка, дай якомога більше інформації! {description} Запитання: {question}"""
 
