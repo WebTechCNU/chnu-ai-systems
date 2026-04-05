@@ -19,8 +19,8 @@ VECTOR_DB_PATH = os.path.join(BASE_DIR, VECTOR_DB_PATH) if VECTOR_DB_PATH else o
 
 # OPEN_API_KEY
 
-def initialize_injestion(url: str, topic: str): 
-    links = fetch_and_parse_links(url, depth=10)
+def initialize_injestion(urls: list[str], topic: str): 
+    links = fetch_and_parse_links(urls, depth=10)
     vector_store = ingest_web_content(links, topic, chunk_size=1000)
     return vector_store
 
@@ -50,9 +50,10 @@ def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000):
     return vector_store
 
 
-def fetch_and_parse_links(url: str, depth: int) -> list[str]:
+def fetch_and_parse_links(urls: list[str], depth: int) -> list[str]:
     parsed = set()
-    links = [url]
+    links = urls.copy()
+    url = urls[0] if urls else ""
 
     for i in range(depth):
         new_links = []
@@ -74,4 +75,5 @@ def fetch_and_parse_links(url: str, depth: int) -> list[str]:
         links = list(set(links))  # remove duplicates
         i += 1
 
+    print(links)
     return links

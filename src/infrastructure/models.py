@@ -2,7 +2,7 @@ from infrastructure.constants import Topic
 from pydantic import BaseModel
 
 class IngestionRequest(BaseModel):
-    url: str
+    urls: list[str]
     topic: Topic
 
 class QARequest(BaseModel):

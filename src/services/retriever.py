@@ -4,6 +4,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 import os
 from pathlib import Path
+from infrastructure.constants import Topic
 
 load_dotenv()
 
@@ -11,14 +12,29 @@ VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH")
 BASE_DIR = Path(__file__).resolve().parent.parent
 VECTOR_DB_PATH = os.path.join(BASE_DIR, VECTOR_DB_PATH) if VECTOR_DB_PATH else os.path.join(BASE_DIR, "vector_store")
 
-def load_vector_store() -> FAISS:
+
+def load_vector_store(topic: str) -> FAISS | None:
+    path = os.path.join(VECTOR_DB_PATH, topic)
+    
+    if not os.path.exists(path):
+        print(f"Skipping: No vector store found at {path}")
+        return None 
+        
     embeddings = OpenAIEmbeddings()
     vector_store = FAISS.load_local(
-        VECTOR_DB_PATH, 
+        path, 
         embeddings,
-        allow_dangerous_deserialization=True)
+        allow_dangerous_deserialization=True
+    )
+    
     return vector_store
 
 
 def get_vector_store(request: Request):
     return request.app.state.vector_store
+
+def get_vector_store_buk(request: Request):
+    return request.app.state.vector_store_buk
+
+def get_vector_store_qa(request: Request):
+    return request.app.state.vector_store_qa

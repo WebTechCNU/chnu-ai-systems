@@ -9,17 +9,20 @@ from sqlalchemy.orm import Session
 from domain.database import Base, engine
 from domain.entities import User
 from services.ingest import initialize_injestion
-from services.retriever import get_vector_store, load_vector_store
+from services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
 from fastapi import Request
-from services.rag_chain import query
+from services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
 from services.location_service import get_recommendation_from_ai
+from infrastructure.constants import Topic
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading vector store...")
-    app.state.vector_store = load_vector_store()
+    app.state.vector_store = load_vector_store(Topic.MATH_FACULTY.value)
+    app.state.vector_store_buk = load_vector_store(Topic.ROMANIAN_CULTURE.value)
+    app.state.vector_store_qa = load_vector_store(Topic.QA_HELPER.value)
     print("Vector store loaded.")
     yield
     print("Shutting down...")
@@ -43,7 +46,7 @@ def on_startup():
 
 @app.post("/api/math-faculty")
 async def math_faculty(request: MathFacultyRequest, vector_store = Depends(get_vector_store)):
-    result = query(request.question, request.chat_history, vector_store)
+    result = query_math_faculty(request.question, request.chat_history, vector_store)
     return {"status": "success", "answer": result}
 
 @app.post("/api/locations")
@@ -57,21 +60,21 @@ async def locations(request: LocationsRequest):
     return {"status": "success", "answer": result}
 
 @app.post("/api/qa")
-async def qa(request: QARequest):
-    print("Received data:", request)
-    return {"status": "success", "data_received": request}
+async def qa(request: QARequest, vector_store = Depends(get_vector_store_qa)):
+    result = query_qa(request.question, request.chat_history, vector_store)
+    return {"status": "success", "answer": result}
 
 @app.post("/api/romanian-culture")
-async def romanian_culture(request: RomanianCultureRequest):
-    print("Received data:", request)
-    return {"status": "success", "data_received": request}
+async def romanian_culture(request: RomanianCultureRequest, vector_store = Depends(get_vector_store_buk)):
+    result = query_romanian_culture(request.question, request.chat_history, vector_store)
+    return {"status": "success", "answer": result}
 
 
 @app.post("/api/ingestion-job")
 async def ingestion_job(
         ingestionData: IngestionRequest, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
-    initialize_injestion(ingestionData.url, ingestionData.topic)
+    initialize_injestion(ingestionData.urls, ingestionData.topic.value)
     return {"status": "success", "data_received": ingestionData}
 
 @app.post("/api/ingestion-text")
