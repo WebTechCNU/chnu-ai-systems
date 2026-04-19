@@ -14,6 +14,7 @@ from fastapi import Request
 from services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
 from services.location_service import get_recommendation_from_ai
 from infrastructure.constants import Topic
+from services.validation import validate
 
 load_dotenv()
 
@@ -46,6 +47,9 @@ def on_startup():
 
 @app.post("/api/math-faculty")
 async def math_faculty(request: MathFacultyRequest, vector_store = Depends(get_vector_store)):
+    validation = validate(request.question)
+    if not validation["meaningful"]:
+        return {"status": "failed", "reasons": validation["reasons"]}
     result = query_math_faculty(request.question, request.chat_history, vector_store)
     return {"status": "success", "answer": result}
 

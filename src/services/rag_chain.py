@@ -10,6 +10,7 @@ from infrastructure.models import MathFacultyRequest
 from infrastructure.models import MathFacultyRequest
 from services.retriever import get_vector_store, get_vector_store_buk, get_vector_store_qa
 from infrastructure.prompt_templates import MATH_FACULTY_GENERAL, QA_HELPER, ROMANIAN_CULTURE_HELPER
+from langchain.retrievers.multi_query import MultiQueryRetriever
 
 
 load_dotenv()
@@ -41,7 +42,18 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
         temperature=0
     )
 
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+    # Multi-Query Retriever: It re-writes the user query into 3 versions
+    # to catch relevant chunks even if the wording is different.
+    base_retriever = vector_store.as_retriever(
+        search_type="similarity", 
+        search_kwargs={"k": 10}
+    )
+
+    retriever = MultiQueryRetriever.from_llm(
+        retriever=base_retriever, 
+        llm=llm
+    )
+    
     rag_chain = (
         {
             "context": retriever,

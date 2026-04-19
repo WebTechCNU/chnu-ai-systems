@@ -26,26 +26,56 @@ def initialize_injestion(urls: list[str], topic: str):
 
 def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000): 
     all_texts = []
-
+    
     for link in url:
         loader = WebBaseLoader(link)
-        data = loader.load()
+        try:
+            data = loader.load() # data is a list of Document objects
+            
+            # Extract a clean title if possible for the metadata
+            page_title = link.split('/')[-1].replace('-', ' ').replace('.html', '')
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=0,
-            separators=["\n\n", "\n", " ", ""]
-        )
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=300, # Increased overlap helps keep context together
+                separators=["\n\n", "\n", " ", ""]
+            )
+            
+            texts = text_splitter.split_documents(data)
+            
+            # --- CRITICAL FIX: Inject context into the text itself ---
+            for doc in texts:
+                # We prepend the page context to the chunk text so the embedding 
+                # catches the relationship between the name and the content.
+                doc.page_content = f"Source: {link} (Subject: {page_title})\nContent: {doc.page_content}"
+                doc.metadata["source"] = link
+                
+            all_texts.extend(texts)
+        except Exception as e:
+            print(f"Skipping {link}: {e}")
 
-        texts = text_splitter.split_documents(data)
-        all_texts.extend(texts)
+    embeddings = OpenAIEmbeddings(api_key=OPEN_API_KEY)
 
-    embeddings = OpenAIEmbeddings(
-        api_key=OPEN_API_KEY
-    )
-    vector_store = FAISS.from_documents(all_texts, embeddings)
+    # 2. Batch Ingestion to avoid OpenAI Token Limits
+    batch_size = 100  # Number of chunks per API call
+    vector_store = None
 
-    vector_store.save_local(VECTOR_DB_PATH + f"/{topic}")
+    print(f"Total chunks to embed: {len(all_texts)}")
+
+    for i in range(0, len(all_texts), batch_size):
+        batch = all_texts[i : i + batch_size]
+        if vector_store is None:
+            # Create the store with the first batch
+            vector_store = FAISS.from_documents(batch, embeddings)
+        else:
+            # Add subsequent batches to the existing store
+            vector_store.add_documents(batch)
+        
+        print(f"Indexed {i + len(batch)} / {len(all_texts)} chunks...")
+
+    # 3. Save
+    save_path = os.path.join(VECTOR_DB_PATH, topic)
+    vector_store.save_local(save_path)
     
     return vector_store
 
