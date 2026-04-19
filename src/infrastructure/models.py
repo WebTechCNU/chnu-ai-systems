@@ -1,4 +1,4 @@
-from infrastructure.constants import Topic
+from src.infrastructure.constants import Topic
 from pydantic import BaseModel
 
 class IngestionRequest(BaseModel):

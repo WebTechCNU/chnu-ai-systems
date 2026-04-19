@@ -1,20 +1,20 @@
 from fastapi import FastAPI, Depends
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
-from services import security
-from services.auth import get_db, register_user, login_user, get_current_user, require_role
+from src.infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
+from src.services import security
+from src.services.auth import get_db, register_user, login_user, get_current_user, require_role
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from domain.database import Base, engine
 from domain.entities import User
-from services.ingest import initialize_injestion
-from services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
+from src.services.ingest import initialize_injestion
+from src.services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
 from fastapi import Request
-from services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
-from services.location_service import get_recommendation_from_ai
-from infrastructure.constants import Topic
-from services.validation import validate
+from src.services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
+from src.services.location_service import get_recommendation_from_ai
+from src.infrastructure.constants import Topic
+from src.services.validation import validate
 
 load_dotenv()
 

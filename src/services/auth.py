@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from jose import JWTError
 
 from domain.database import SessionLocal
-from infrastructure.models import LoginRequest, RegisterRequest
+from src.infrastructure.models import LoginRequest, RegisterRequest
 from domain.entities import User
-from services.security import create_access_token, decode_token, verify_password, hash_password
+from src.services.security import create_access_token, decode_token, verify_password, hash_password
 from dotenv import load_dotenv
 
 load_dotenv()

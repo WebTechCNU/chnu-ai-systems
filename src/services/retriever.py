@@ -4,7 +4,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 import os
 from pathlib import Path
-from infrastructure.constants import Topic
+from src.infrastructure.constants import Topic
 
 load_dotenv()
 
