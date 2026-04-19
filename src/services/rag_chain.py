@@ -5,11 +5,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
-from infrastructure.constants import Topic
-from infrastructure.models import MathFacultyRequest
-from infrastructure.models import MathFacultyRequest
-from services.retriever import get_vector_store, get_vector_store_buk, get_vector_store_qa
-from infrastructure.prompt_templates import MATH_FACULTY_GENERAL, QA_HELPER, ROMANIAN_CULTURE_HELPER
+from src.infrastructure.constants import Topic
+from src.infrastructure.models import MathFacultyRequest
+from src.infrastructure.models import MathFacultyRequest
+from src.services.retriever import get_vector_store, get_vector_store_buk, get_vector_store_qa
+from src.infrastructure.prompt_templates import MATH_FACULTY_GENERAL, QA_HELPER, ROMANIAN_CULTURE_HELPER
 from langchain.retrievers.multi_query import MultiQueryRetriever
 
 

@@ -6,8 +6,8 @@ from src.services import security
 from src.services.auth import get_db, register_user, login_user, get_current_user, require_role
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
-from domain.database import Base, engine
-from domain.entities import User
+from src.domain.database import Base, engine
+from src.domain.entities import User
 from src.services.ingest import initialize_injestion
 from src.services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
 from fastapi import Request
