@@ -2,7 +2,7 @@
 import re
 import math
 from collections import Counter
-# from langdetect import detect, LangDetectException
+from langdetect import detect, LangDetectException
 import pymorphy3
 
 morph = pymorphy3.MorphAnalyzer(lang="uk")
@@ -65,13 +65,13 @@ def validate(text: str) -> dict:
         reasons.append(f"low_word_ratio:{ratio:.2f}")
 
     # 5. Language detection (only if text is long enough to be reliable)
-    # if len(text) >= 10:
-    #     try:
-    #         lang = detect(text)
-    #         if lang not in allowed_langs:
-    #             reasons.append(f"wrong_language:{lang}")
-    #     except LangDetectException:
-    #         reasons.append("language_undetectable")
+    if len(text) >= 10:
+        try:
+            lang = detect(text)
+            if lang not in allowed_langs:
+                reasons.append(f"wrong_language:{lang}")
+        except LangDetectException:
+            reasons.append("language_undetectable")
 
     is_meaningful = len(reasons) == 0
     return {"meaningful": is_meaningful, "reasons": reasons}
