@@ -12,7 +12,6 @@ from services.retriever import get_vector_store, get_vector_store_buk, get_vecto
 from infrastructure.prompt_templates import MATH_FACULTY_GENERAL, QA_HELPER, ROMANIAN_CULTURE_HELPER
 from langchain.retrievers.multi_query import MultiQueryRetriever
 
-
 load_dotenv()
 
 OPEN_API_KEY = os.getenv("OPEN_API_KEY")
