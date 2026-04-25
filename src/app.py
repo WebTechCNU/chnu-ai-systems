@@ -24,14 +24,9 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     print("Loading vector stores...")
     print("=" * 60)
-    
-    # Load all vector stores with validation
-    vector_stores = {
-        "math_faculty": load_vector_store(Topic.MATH_FACULTY.value),
-        "romanian_culture": load_vector_store(Topic.ROMANIAN_CULTURE.value),
-        "qa_helper": load_vector_store(Topic.QA_HELPER.value)
-    }
-    
+
+    vector_stores = reload_vector_stores(app)
+
     # Validate and report status
     print("\n" + "=" * 60)
     print("Vector Store Loading Status:")
@@ -43,21 +38,30 @@ async def lifespan(app: FastAPI):
             all_loaded = False
         else:
             print(f"✅ SUCCESS: {name} vector store loaded")
-    
+
     if not all_loaded:
         print("\n⚠️  WARNING: Some vector stores failed to load.")
         print("   Check VECTOR_DB_PATH in .env and ensure FAISS indices exist.")
     else:
         print("\n✅ All vector stores loaded successfully!")
     print("=" * 60 + "\n")
-    
-    # Assign to app state
+
+    yield
+    print("Shutting down...")
+
+
+def reload_vector_stores(app: FastAPI):
+    vector_stores = {
+        "math_faculty": load_vector_store(Topic.MATH_FACULTY.value),
+        "romanian_culture": load_vector_store(Topic.ROMANIAN_CULTURE.value),
+        "qa_helper": load_vector_store(Topic.QA_HELPER.value)
+    }
+
     app.state.vector_store = vector_stores["math_faculty"]
     app.state.vector_store_buk = vector_stores["romanian_culture"]
     app.state.vector_store_qa = vector_stores["qa_helper"]
-    
-    yield
-    print("Shutting down...")
+
+    return vector_stores
 
 
 app = FastAPI(lifespan=lifespan)
@@ -189,6 +193,19 @@ async def ingestion_job(
     print("Received data:", ingestionData)
     initialize_injestion(ingestionData.urls, ingestionData.topic.value)
     return {"status": "success", "data_received": ingestionData}
+
+@app.post("/api/reload-vectorstores")
+async def reload_vectorstores_endpoint(admin: User = Depends(require_role("admin"))):
+    vector_stores = reload_vector_stores(app)
+    status = {
+        name: ("success" if store is not None else "failed")
+        for name, store in vector_stores.items()
+    }
+    overall = "success" if all(store is not None for store in vector_stores.values()) else "partial"
+    return {
+        "status": overall,
+        "vectorstores": status
+    }
 
 @app.post("/api/ingestion-text")
 async def ingest_text_data(ingestionData: bytes, admin: User = Depends(require_role("admin"))):
