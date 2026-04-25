@@ -50,7 +50,7 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
             "score_threshold": 0.5  # ← LOWERED from 0.7 for better recall
         }
     )
-
+    
     # Add error handling for MultiQueryRetriever
     try:
         retriever = MultiQueryRetriever.from_llm(
@@ -60,8 +60,7 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
     except Exception as e:
         print(f"⚠️  MultiQueryRetriever failed: {e}, using base retriever")
         retriever = base_retriever
-    
-    # Format documents to string for the prompt
+
     def format_docs(docs):
         """Format retrieved documents into a single context string."""
         if not docs:
