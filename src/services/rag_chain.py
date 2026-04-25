@@ -55,13 +55,19 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
         retriever=base_retriever, 
         llm=llm
     )
+
+    def format_docs(docs):
+        """Format retrieved documents into a single context string."""
+        if not docs:
+            return "No relevant context found."
+        return "\n\n".join(doc.page_content for doc in docs)
     
     rag_chain = (
         {
-            "context": retriever,
+            "context": retriever | format_docs,
             "question": RunnablePassthrough()
         }
-        | MATH_FACULTY_GENERAL
+        | template
         | llm
         | StrOutputParser()
 )
