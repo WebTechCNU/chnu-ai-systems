@@ -47,23 +47,35 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
         search_type="similarity_score_threshold",
         search_kwargs={
             "k": 5,              # ← GET MORE CANDIDATES
-            "score_threshold": 0.7  # ← ONLY RELEVANT RESULTS
+            "score_threshold": 0.5  # ← LOWERED from 0.7 for better recall
         }
     )
 
-    retriever = MultiQueryRetriever.from_llm(
-        retriever=base_retriever, 
-        llm=llm
-    )
+    # Add error handling for MultiQueryRetriever
+    try:
+        retriever = MultiQueryRetriever.from_llm(
+            retriever=base_retriever, 
+            llm=llm
+        )
+    except Exception as e:
+        print(f"⚠️  MultiQueryRetriever failed: {e}, using base retriever")
+        retriever = base_retriever
+    
+    # Format documents to string for the prompt
+    def format_docs(docs):
+        """Format retrieved documents into a single context string."""
+        if not docs:
+            return "No relevant context found."
+        return "\n\n".join(doc.page_content for doc in docs)
     
     rag_chain = (
         {
-            "context": retriever,
+            "context": retriever | format_docs,  # ← Format docs to string
             "question": RunnablePassthrough()
         }
-        | MATH_FACULTY_GENERAL
+        | template
         | llm
         | StrOutputParser()
-)
+    )
 
     return rag_chain

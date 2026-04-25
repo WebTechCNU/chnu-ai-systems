@@ -38,3 +38,13 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class SearchRequest(BaseModel):
+    query: str
+    topic: Topic = Topic.MATH_FACULTY
+    k: int = 10
+    score_threshold: float = 0.7
+    search_type: str = "similarity_score_threshold"  # "similarity", "mmr", "similarity_score_threshold"
+    use_reranking: bool = False
+    use_multi_query: bool = False
+    filters: dict | None = None
