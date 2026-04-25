@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from src.infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest
+from src.infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest, SearchRequest
 from src.services import security
 from src.services.auth import get_db, register_user, login_user, get_current_user, require_role
 from dotenv import load_dotenv
@@ -15,16 +15,47 @@ from src.services.rag_chain import query_math_faculty, query_qa, query_romanian_
 from src.services.location_service import get_recommendation_from_ai
 from src.infrastructure.constants import Topic
 from src.services.validation import validate
+from src.services.search import search_documents, search_with_reranking, multi_query_search
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Loading vector store...")
-    app.state.vector_store = load_vector_store(Topic.MATH_FACULTY.value)
-    app.state.vector_store_buk = load_vector_store(Topic.ROMANIAN_CULTURE.value)
-    app.state.vector_store_qa = load_vector_store(Topic.QA_HELPER.value)
-    print("Vector store loaded.")
+    print("=" * 60)
+    print("Loading vector stores...")
+    print("=" * 60)
+    
+    # Load all vector stores with validation
+    vector_stores = {
+        "math_faculty": load_vector_store(Topic.MATH_FACULTY.value),
+        "romanian_culture": load_vector_store(Topic.ROMANIAN_CULTURE.value),
+        "qa_helper": load_vector_store(Topic.QA_HELPER.value)
+    }
+    
+    # Validate and report status
+    print("\n" + "=" * 60)
+    print("Vector Store Loading Status:")
+    print("=" * 60)
+    all_loaded = True
+    for name, store in vector_stores.items():
+        if store is None:
+            print(f"❌ FAILED: {name} vector store did not load!")
+            all_loaded = False
+        else:
+            print(f"✅ SUCCESS: {name} vector store loaded")
+    
+    if not all_loaded:
+        print("\n⚠️  WARNING: Some vector stores failed to load.")
+        print("   Check VECTOR_DB_PATH in .env and ensure FAISS indices exist.")
+    else:
+        print("\n✅ All vector stores loaded successfully!")
+    print("=" * 60 + "\n")
+    
+    # Assign to app state
+    app.state.vector_store = vector_stores["math_faculty"]
+    app.state.vector_store_buk = vector_stores["romanian_culture"]
+    app.state.vector_store_qa = vector_stores["qa_helper"]
+    
     yield
     print("Shutting down...")
 
@@ -47,6 +78,13 @@ def on_startup():
 
 @app.post("/api/math-faculty")
 async def math_faculty(request: MathFacultyRequest, vector_store = Depends(get_vector_store)):
+    # Check if vector store is available
+    if vector_store is None:
+        return {
+            "status": "failed", 
+            "error": "Vector store not available. Please check server logs."
+        }
+    
     validation = validate(request.question)
     if not validation["meaningful"]:
         return {"status": "failed", "reasons": validation["reasons"]}
@@ -65,13 +103,84 @@ async def locations(request: LocationsRequest):
 
 @app.post("/api/qa")
 async def qa(request: QARequest, vector_store = Depends(get_vector_store_qa)):
+    # Check if vector store is available
+    if vector_store is None:
+        return {
+            "status": "failed", 
+            "error": "QA vector store not available. Please check server logs."
+        }
+    
     result = query_qa(request.question, request.chat_history, vector_store)
     return {"status": "success", "answer": result}
 
 @app.post("/api/romanian-culture")
 async def romanian_culture(request: RomanianCultureRequest, vector_store = Depends(get_vector_store_buk)):
+    # Check if vector store is available
+    if vector_store is None:
+        return {
+            "status": "failed", 
+            "error": "Romanian culture vector store not available. Please check server logs."
+        }
+    
     result = query_romanian_culture(request.question, request.chat_history, vector_store)
     return {"status": "success", "answer": result}
+
+
+@app.post("/api/search")
+async def search(request: Request, search_request: SearchRequest):
+    """
+    Standalone search endpoint that retrieves documents without LLM generation.
+    Supports multiple search strategies and reranking.
+    """
+    # Use cached vector stores from app.state instead of reloading
+    if search_request.topic == Topic.MATH_FACULTY:
+        vector_store = request.app.state.vector_store
+    elif search_request.topic == Topic.ROMANIAN_CULTURE:
+        vector_store = request.app.state.vector_store_buk
+    elif search_request.topic == Topic.QA_HELPER:
+        vector_store = request.app.state.vector_store_qa
+    else:
+        return {"status": "failed", "error": "Invalid topic"}
+    
+    if vector_store is None:
+        return {"status": "failed", "error": f"Vector store not found for topic: {search_request.topic.value}"}
+    
+    try:
+        # Choose search strategy
+        if search_request.use_multi_query:
+            results = multi_query_search(
+                query=search_request.query,
+                vector_store=vector_store,
+                k=search_request.k,
+                score_threshold=search_request.score_threshold
+            )
+        elif search_request.use_reranking:
+            results = search_with_reranking(
+                query=search_request.query,
+                vector_store=vector_store,
+                k=search_request.k,
+                initial_k=search_request.k * 5,
+                score_threshold=search_request.score_threshold
+            )
+        else:
+            results = search_documents(
+                query=search_request.query,
+                vector_store=vector_store,
+                k=search_request.k,
+                score_threshold=search_request.score_threshold,
+                filter_metadata=search_request.filters,
+                search_type=search_request.search_type
+            )
+        
+        return {
+            "status": "success", 
+            "results": results, 
+            "count": len(results),
+            "query": search_request.query,
+            "topic": search_request.topic.value
+        }
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
 
 
 @app.post("/api/ingestion-job")
