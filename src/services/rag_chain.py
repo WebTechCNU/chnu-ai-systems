@@ -44,8 +44,11 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
     # Multi-Query Retriever: It re-writes the user query into 3 versions
     # to catch relevant chunks even if the wording is different.
     base_retriever = vector_store.as_retriever(
-        search_type="similarity", 
-        search_kwargs={"k": 10}
+        search_type="similarity_score_threshold",
+        search_kwargs={
+            "k": 15,              # ← GET MORE CANDIDATES
+            "score_threshold": 0.7  # ← ONLY RELEVANT RESULTS
+        }
     )
 
     retriever = MultiQueryRetriever.from_llm(

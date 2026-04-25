@@ -36,8 +36,8 @@ def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000):
             page_title = link.split('/')[-1].replace('-', ' ').replace('.html', '')
 
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=chunk_size,
-                chunk_overlap=500, # Increased overlap helps keep context together
+                chunk_size=1000,
+                chunk_overlap=500,
                 separators=["\n\n", "\n", " ", ""]
             )
             
