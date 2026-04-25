@@ -52,5 +52,5 @@ Dialectical language, history etc.
 
 ### Running the application:
 
-cd src
-uvicorn app:app --reload
+uvicorn src.app:app
+

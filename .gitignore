@@ -1,3 +1,4 @@
 .env
 # src/data/app.db
 __pycache__/
+src/data/

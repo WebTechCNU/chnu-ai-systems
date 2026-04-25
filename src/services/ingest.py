@@ -37,7 +37,7 @@ def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000):
 
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size,
-                chunk_overlap=300, # Increased overlap helps keep context together
+                chunk_overlap=500, # Increased overlap helps keep context together
                 separators=["\n\n", "\n", " ", ""]
             )
             
