@@ -11,6 +11,7 @@ from src.infrastructure.models import MathFacultyRequest
 from src.services.retriever import get_vector_store, get_vector_store_buk, get_vector_store_qa
 from src.infrastructure.prompt_templates import MATH_FACULTY_GENERAL, QA_HELPER, ROMANIAN_CULTURE_HELPER
 from langchain.retrievers.multi_query import MultiQueryRetriever
+from src.services.retrieval_enhanced import retrieve_with_metadata_boost, format_structured_context
 
 load_dotenv()
 
@@ -61,10 +62,11 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
         print(f"⚠️  MultiQueryRetriever failed: {e}, using base retriever")
         retriever = base_retriever
 
-    def format_docs(docs):
-        """Format retrieved documents into a single context string."""
+    def format_docs(docs):with structure preservation."""
         if not docs:
             return "No relevant context found."
+        # Use enhanced formatting that groups related info
+        return format_structured_context(
         return "\n\n".join(doc.page_content for doc in docs)
     
     rag_chain = (
