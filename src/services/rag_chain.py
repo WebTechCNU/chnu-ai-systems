@@ -62,12 +62,12 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
         print(f"⚠️  MultiQueryRetriever failed: {e}, using base retriever")
         retriever = base_retriever
 
-    def format_docs(docs):with structure preservation."""
+    def format_docs(docs):
+        """Format documents with structure preservation."""
         if not docs:
             return "No relevant context found."
         # Use enhanced formatting that groups related info
-        return format_structured_context(
-        return "\n\n".join(doc.page_content for doc in docs)
+        return format_structured_context(docs)
     
     rag_chain = (
         {
