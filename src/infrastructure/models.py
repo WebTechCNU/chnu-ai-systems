@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class IngestionRequest(BaseModel):
     urls: list[str]
     topic: Topic
+    use_structured: bool = True  # Default to structured ingestion
 
 class QARequest(BaseModel):
     question: str

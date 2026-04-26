@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from src.domain.database import Base, engine
 from src.domain.entities import User
 from src.services.ingest import initialize_injestion
+from src.services.ingest_structured import initialize_structured_ingestion
 from src.services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
 from fastapi import Request
 from src.services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
@@ -187,8 +188,18 @@ async def search(request: Request, search_request: SearchRequest):
 async def ingestion_job(
         ingestionData: IngestionRequest, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
-    initialize_injestion(ingestionData.urls, ingestionData.topic.value)
-    return {"status": "success", "data_received": ingestionData}
+    
+    # Use structured ingestion by default for better entity relationship preservation
+    use_structured = getattr(ingestionData, 'use_structured', True)
+    
+    if use_structured:
+        print("Using STRUCTURED ingestion (preserves teacher profiles, courses)")
+        initialize_structured_ingestion(ingestionData.urls, ingestionData.topic.value)
+    else:
+        print("Using LEGACY ingestion (basic chunking)")
+        initialize_injestion(ingestionData.urls, ingestionData.topic.value)
+    
+    return {"status": "success", "data_received": ingestionData, "method": "structured" if use_structured else "legacy"}
 
 @app.post("/api/ingestion-text")
 async def ingest_text_data(ingestionData: bytes, admin: User = Depends(require_role("admin"))):
