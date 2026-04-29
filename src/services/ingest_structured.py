@@ -48,7 +48,7 @@ def parse_teacher_profile(soup: BeautifulSoup, url: str) -> Optional[Dict]:
     # Try to find teacher name (common patterns)
     name_selectors = [
         'h1', 'h2.teacher-name', '.profile-name', 
-        '.teacher-title', '[class*="name"]'
+        '.h2', '[class*="name"]'
     ]
     
     for selector in name_selectors:
@@ -138,7 +138,7 @@ def create_teacher_document(profile: Dict) -> Document:
     
     if profile["courses"]:
         courses_text = "\n• ".join(profile["courses"])
-        content_parts.append(f"\nКурси які викладає:\n• {courses_text}")
+        content_parts.append(f"\nКурси, дисципліни, які викладає:\n• {courses_text}")
     
     # Create one unified document
     full_content = "\n\n".join(content_parts)
