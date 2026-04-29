@@ -1,5 +1,6 @@
-from src.infrastructure.constants import Topic
+from src.infrastructure.constants import TestCase, Topic
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 
 class IngestionRequest(BaseModel):
     urls: list[str]
@@ -7,7 +8,7 @@ class IngestionRequest(BaseModel):
     use_structured: bool = True  # Default to structured ingestion
 
 class QARequest(BaseModel):
-    question: str
+    prompt: str
     context: str
     chat_history: list[str]
 
@@ -49,3 +50,28 @@ class SearchRequest(BaseModel):
     use_reranking: bool = False
     use_multi_query: bool = False
     filters: dict | None = None
+
+
+class UserRequest(BaseModel):
+    prompt: str
+
+class IntentResult(BaseModel):
+    case: TestCase
+    extracted_data: Dict[str, Any]
+    confidence: float
+
+class PageIssue(BaseModel):
+    type: str  # console_error, html_issue, accessibility, performance
+    severity: str  # critical, major, minor
+    description: str
+    location: Optional[str] = None
+    suggestion: str
+
+class BugReport(BaseModel):
+    title: str
+    description: str
+    steps_to_reproduce: List[str]
+    expected_result: str
+    actual_result: str
+    severity: str
+    additional_context: Optional[Dict] = None

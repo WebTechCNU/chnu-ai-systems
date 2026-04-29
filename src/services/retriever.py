@@ -59,3 +59,6 @@ def get_vector_store_buk(request: Request):
 
 def get_vector_store_qa(request: Request):
     return request.app.state.vector_store_qa
+
+def get_llm_wrapper(request: Request):
+    return request.app.state.llm_wrapper

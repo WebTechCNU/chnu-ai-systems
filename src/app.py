@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Depends
+import os
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from src.infrastructure.models import IngestionRequest, LoginRequest, QARequest, MathFacultyRequest, RegisterRequest, RomanianCultureRequest, LocationsRequest, SearchRequest
 from src.services import security
 from src.services.auth import get_db, register_user, login_user, get_current_user, require_role
@@ -10,13 +12,14 @@ from src.domain.database import Base, engine
 from src.domain.entities import User
 from src.services.ingest import initialize_injestion
 from src.services.ingest_structured import initialize_structured_ingestion
-from src.services.retriever import get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
+from src.services.retriever import get_llm_wrapper, get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa
 from fastapi import Request
 from src.services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
 from src.services.location_service import get_recommendation_from_ai
-from src.infrastructure.constants import Topic
+from src.infrastructure.constants import TestCase, Topic
 from src.services.validation import validate
 from src.services.search import search_documents, search_with_reranking, multi_query_search
+from src.services.qa_helper import LLMClient, IntentClassifier, WebTester, APITester, LogAnalyzer
 
 load_dotenv()
 
@@ -62,6 +65,9 @@ def reload_vector_stores(app: FastAPI):
     app.state.vector_store_buk = vector_stores["romanian_culture"]
     app.state.vector_store_qa = vector_stores["qa_helper"]
 
+    OPEN_API_KEY = os.getenv("OPEN_API_KEY")
+    app.state.llm_wrapper = LLMClient(OPEN_API_KEY)
+
     return vector_stores
 
 
@@ -106,17 +112,17 @@ async def locations(request: LocationsRequest):
     )
     return {"status": "success", "answer": result}
 
-@app.post("/api/qa")
-async def qa(request: QARequest, vector_store = Depends(get_vector_store_qa)):
-    # Check if vector store is available
-    if vector_store is None:
-        return {
-            "status": "failed", 
-            "error": "QA vector store not available. Please check server logs."
-        }
+# @app.post("/api/qa")
+# async def qa(request: QARequest, vector_store = Depends(get_vector_store_qa)):
+#     # Check if vector store is available
+#     if vector_store is None:
+#         return {
+#             "status": "failed", 
+#             "error": "QA vector store not available. Please check server logs."
+#         }
     
-    result = query_qa(request.question, request.chat_history, vector_store)
-    return {"status": "success", "answer": result}
+#     result = query_qa(request.question, request.chat_history, vector_store)
+#     return {"status": "success", "answer": result}
 
 @app.post("/api/romanian-culture")
 async def romanian_culture(request: RomanianCultureRequest, vector_store = Depends(get_vector_store_buk)):
@@ -222,6 +228,63 @@ async def reload_vectorstores_endpoint(admin: User = Depends(require_role("admin
 async def ingest_text_data(ingestionData: bytes, admin: User = Depends(require_role("admin"))):
     print("Received data:", ingestionData)
     return {"status": "success", "data_received": ingestionData}
+
+
+@app.post("/api/qa")
+async def qa(request: QARequest, llm_client = Depends(get_llm_wrapper)):
+    try:
+        # Step 1: Classify the intent
+        intent_classifier = IntentClassifier(llm_client)
+        intent = await intent_classifier.classify(request.prompt)
+        
+        # Step 2: Execute the appropriate testing service
+        if intent.case == TestCase.WEB_PAGE:
+            url = intent.extracted_data.get("url")
+            if not url:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "No URL found for web page testing"}
+                )
+            
+            web_tester = WebTester(llm_client)
+            bug_report = await web_tester.test_page(url)
+            
+        elif intent.case == TestCase.API_ENDPOINT:
+            url = intent.extracted_data.get("url")
+            method = intent.extracted_data.get("method", "GET")
+            
+            if not url:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "No URL found for API testing"}
+                )
+            
+            api_tester = APITester(llm_client)
+            bug_report = await api_tester.test_endpoint(url, method)
+            
+        elif intent.case == TestCase.LOGS:
+            log_content = intent.extracted_data.get("logs", request.prompt)
+            log_analyzer = LogAnalyzer(llm_client)
+            bug_report = await log_analyzer.analyze_logs(log_content)
+            
+        else:
+            # Unknown intent - let LLM provide a helpful response
+            response = await llm_client.generate(
+                request.prompt,
+                system_prompt="You are a QA testing assistant. Help the user with testing questions."
+            )
+            return {"response": response, "case": "general_help"}
+        
+        # Step 3: Return the bug report in a readable format
+        return {
+            "case": intent.case,
+            "confidence": intent.confidence,
+            "bug_reports": [report.dict() for report in bug_report],
+            "summary": f"🔍 {bug_report[0].title}\n\n{bug_report[0].description[:500]}..."
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/login")
