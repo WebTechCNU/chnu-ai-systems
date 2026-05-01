@@ -190,7 +190,7 @@ def create_course_documents(profile: Dict) -> List[Document]:
     return course_docs
 
 
-def ingest_structured_web_content(urls: list[str], topic: str) -> FAISS:
+def ingest_structured_web_content(urls: list[str], topic: str, overwrite: bool = True):
     """
     Ingest web content with structure preservation.
     Keeps teacher profiles intact instead of splitting blindly.
@@ -256,9 +256,21 @@ def ingest_structured_web_content(urls: list[str], topic: str) -> FAISS:
     # Create embeddings
     embeddings = OpenAIEmbeddings()
     
+    # Determine save path
+    db_path = VECTOR_DB_PATH if VECTOR_DB_PATH else os.path.join(BASE_DIR, "vector_store")
+    save_path = os.path.join(db_path, topic)
+    
+    # Handle overwrite flag
+    vector_store: Optional[FAISS] = None
+    if not overwrite:
+        try:
+            vector_store = FAISS.load_local(save_path, embeddings)
+            print(f"Loaded existing vector store from {save_path}")
+        except Exception as e:
+            print(f"No existing vector store found at {save_path}, creating new one. Error: {e}")
+    
     # Batch ingestion
     batch_size = 100
-    vector_store: Optional[FAISS] = None
     
     for i in range(0, len(all_documents), batch_size):
         batch = all_documents[i:i + batch_size]
@@ -274,8 +286,6 @@ def ingest_structured_web_content(urls: list[str], topic: str) -> FAISS:
         raise ValueError("Failed to create vector store - no documents were indexed")
     
     # Save
-    db_path = VECTOR_DB_PATH if VECTOR_DB_PATH else os.path.join(BASE_DIR, "vector_store")
-    save_path = os.path.join(db_path, topic)
     os.makedirs(save_path, exist_ok=True)
     vector_store.save_local(save_path)
     print(f"\n✅ Vector store saved to: {save_path}")
@@ -283,7 +293,7 @@ def ingest_structured_web_content(urls: list[str], topic: str) -> FAISS:
     return vector_store
 
 
-def initialize_structured_ingestion(urls: list[str], topic: str):
+def initialize_structured_ingestion(urls: list[str], topic: str, overwrite: bool = True):
     """
     Initialize ingestion with structure preservation.
     Entry point for the ingestion API.
@@ -292,7 +302,7 @@ def initialize_structured_ingestion(urls: list[str], topic: str):
     all_links = fetch_and_parse_links(urls, depth=10)
     
     # Ingest with structure preservation
-    vector_store = ingest_structured_web_content(all_links, topic)
+    vector_store = ingest_structured_web_content(all_links, topic, overwrite=overwrite)
     
     return vector_store
 

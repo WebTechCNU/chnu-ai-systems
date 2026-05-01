@@ -204,7 +204,7 @@ async def ingestion_job(
     
     if use_structured:
         print("Using STRUCTURED ingestion (preserves teacher profiles, courses)")
-        initialize_structured_ingestion(ingestionData.urls, ingestionData.topic.value)
+        initialize_structured_ingestion(ingestionData.urls, ingestionData.topic.value, overwrite=ingestionData.overwrite)
     else:
         print("Using LEGACY ingestion (basic chunking)")
         initialize_injestion(ingestionData.urls, ingestionData.topic.value)

@@ -6,6 +6,7 @@ class IngestionRequest(BaseModel):
     urls: list[str]
     topic: Topic
     use_structured: bool = True  # Default to structured ingestion
+    overwrite: bool = True  # Whether to overwrite existing vector store for the topic
 
 class QARequest(BaseModel):
     prompt: str
