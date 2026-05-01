@@ -201,13 +201,18 @@ async def ingestion_job(
     
     # Use structured ingestion by default for better entity relationship preservation
     use_structured = getattr(ingestionData, 'use_structured', True)
-    
-    if use_structured:
-        print("Using STRUCTURED ingestion (preserves teacher profiles, courses)")
-        initialize_structured_ingestion(ingestionData.urls, ingestionData.topic.value, overwrite=ingestionData.overwrite)
-    else:
+
+    if (ingestionData.topic == Topic.ROMANIAN_CULTURE) or not use_structured:
         print("Using LEGACY ingestion (basic chunking)")
-        initialize_injestion(ingestionData.urls, ingestionData.topic.value)
+        initialize_injestion(ingestionData.urls, ingestionData.topic.value,
+                            overwrite=ingestionData.overwrite,
+                            depth=ingestionData.depth)
+    
+    else:
+        print("Using STRUCTURED ingestion (preserves teacher profiles, courses)")
+        initialize_structured_ingestion(ingestionData.urls, ingestionData.topic.value, 
+                                        overwrite=ingestionData.overwrite,
+                                        depth=ingestionData.depth)
     
     return {"status": "success", "data_received": ingestionData, "method": "structured" if use_structured else "legacy"}
 

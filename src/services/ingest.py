@@ -1,3 +1,5 @@
+from typing import Optional
+
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -19,12 +21,12 @@ VECTOR_DB_PATH = os.path.join(BASE_DIR, VECTOR_DB_PATH) if VECTOR_DB_PATH else o
 
 # OPEN_API_KEY
 
-def initialize_injestion(urls: list[str], topic: str): 
-    links = fetch_and_parse_links(urls, depth=10)
-    vector_store = ingest_web_content(links, topic, chunk_size=1000)
+def initialize_injestion(urls: list[str], topic: str, depth: int = 2, overwrite: bool = True): 
+    links = fetch_and_parse_links(urls, depth=depth)
+    vector_store = ingest_web_content(links, topic, chunk_size=1000, overwrite=overwrite)
     return vector_store
 
-def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000): 
+def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000, overwrite: bool = True): 
     all_texts = []
     
     for link in url:
@@ -58,7 +60,15 @@ def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000):
 
     # 2. Batch Ingestion to avoid OpenAI Token Limits
     batch_size = 100  # Number of chunks per API call
-    vector_store = None
+    vector_store: Optional[FAISS] = None
+    save_path = os.path.join(VECTOR_DB_PATH, topic)
+
+    if not overwrite:
+        try:
+            vector_store = FAISS.load_local(save_path, embeddings)
+            print(f"Loaded existing vector store from {save_path}")
+        except Exception as e:
+            print(f"No existing vector store found at {save_path}, creating new one. Error: {e}")
 
     print(f"Total chunks to embed: {len(all_texts)}")
 
@@ -74,7 +84,7 @@ def ingest_web_content(url: list[str], topic: str, chunk_size: int = 1000):
         print(f"Indexed {i + len(batch)} / {len(all_texts)} chunks...")
 
     # 3. Save
-    save_path = os.path.join(VECTOR_DB_PATH, topic)
+    os.makedirs(save_path, exist_ok=True)
     vector_store.save_local(save_path)
     
     return vector_store

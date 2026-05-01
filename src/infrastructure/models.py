@@ -7,6 +7,7 @@ class IngestionRequest(BaseModel):
     topic: Topic
     use_structured: bool = True  # Default to structured ingestion
     overwrite: bool = True  # Whether to overwrite existing vector store for the topic
+    depth: int = 2  # Depth for structured ingestion (e.g., heading levels to consider)
 
 class QARequest(BaseModel):
     prompt: str

@@ -293,13 +293,14 @@ def ingest_structured_web_content(urls: list[str], topic: str, overwrite: bool =
     return vector_store
 
 
-def initialize_structured_ingestion(urls: list[str], topic: str, overwrite: bool = True):
+def initialize_structured_ingestion(urls: list[str], topic: str, 
+                                    overwrite: bool = True, depth: int = 2):
     """
     Initialize ingestion with structure preservation.
     Entry point for the ingestion API.
     """
     # Fetch all related pages
-    all_links = fetch_and_parse_links(urls, depth=10)
+    all_links = fetch_and_parse_links(urls, depth=depth)
     
     # Ingest with structure preservation
     vector_store = ingest_structured_web_content(all_links, topic, overwrite=overwrite)
