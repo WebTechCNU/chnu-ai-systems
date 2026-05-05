@@ -1,4 +1,4 @@
-from src.infrastructure.constants import TestCase, Topic
+from src.infrastructure.constants import RomanianIntentType, TestCase, Topic
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -77,3 +77,9 @@ class BugReport(BaseModel):
     actual_result: str
     severity: str
     additional_context: Optional[Dict] = None
+
+class RomanianIntentResult(BaseModel):
+    intent: RomanianIntentType
+    confidence: float
+    extracted_text: Optional[str] = None
+    target_language: Optional[str] = None

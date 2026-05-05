@@ -12,3 +12,7 @@ class TestCase(str, Enum):
     LOGS = "logs"
     UNKNOWN = "unknown"
 
+class RomanianIntentType(str, Enum):
+    TRANSLATION = "translation"
+    CULTURE = "culture"
+    UNKNOWN = "unknown"

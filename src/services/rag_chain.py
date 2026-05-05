@@ -26,15 +26,24 @@ os.environ['OPENAI_API_KEY'] = OPEN_API_KEY
 
 def query_math_faculty(question: str, chat_history: list[str], vector_store = Depends(get_vector_store)):
     rag_chain = create_rag_chain(MATH_FACULTY_GENERAL, vector_store)
-    return rag_chain.invoke(question)
+    return rag_chain.invoke({
+        "question": question,
+        "chat_history": chat_history
+    })
 
 def query_qa(question: str, chat_history: list[str], vector_store = Depends(get_vector_store_qa)):
     rag_chain = create_rag_chain(QA_HELPER, vector_store)
-    return rag_chain.invoke(question)
+    return rag_chain.invoke({
+        "question": question,
+        "chat_history": chat_history
+    })
 
 def query_romanian_culture(question: str, chat_history: list[str], vector_store = Depends(get_vector_store_buk)):
     rag_chain = create_rag_chain(ROMANIAN_CULTURE_HELPER, vector_store)
-    return rag_chain.invoke(question)
+    return rag_chain.invoke({
+        "question": question,
+        "chat_history": chat_history
+    })
 
 def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_vector_store)):
     llm = ChatOpenAI(
@@ -68,11 +77,19 @@ def create_rag_chain(template: ChatPromptTemplate, vector_store = Depends(get_ve
             return "No relevant context found."
         # Use enhanced formatting that groups related info
         return format_structured_context(docs)
+
+    def format_chat_history(history):
+        if not history:
+            return ""
+        if isinstance(history, list):
+            return "\n".join(history)
+        return str(history)
     
     rag_chain = (
         {
             "context": retriever | format_docs,  # ← Format docs to string
-            "question": RunnablePassthrough()
+            "question": RunnablePassthrough(),
+            "chat_history": RunnablePassthrough() | format_chat_history
         }
         | template
         | llm
