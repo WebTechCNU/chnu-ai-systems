@@ -132,6 +132,9 @@ async def romanian_culture(request: RomanianCultureRequest, vector_store = Depen
             "status": "failed", 
             "error": "Romanian culture vector store not available. Please check server logs."
         }
+    validation = validate(request.question)
+    if not validation["meaningful"]:
+        return {"status": "failed", "reasons": validation["reasons"]}
     
     result = query_romanian_culture(request.question, request.chat_history, vector_store)
     return {"status": "success", "answer": result}
@@ -237,6 +240,10 @@ async def ingest_text_data(ingestionData: bytes, admin: User = Depends(require_r
 
 @app.post("/api/qa")
 async def qa(request: QARequest, llm_client = Depends(get_llm_wrapper)):
+    validation = validate(request.prompt)
+    if not validation["meaningful"]:
+        return {"status": "failed", "reasons": validation["reasons"]}
+    
     try:
         # Step 1: Classify the intent
         intent_classifier = IntentClassifier(llm_client)
