@@ -83,3 +83,9 @@ class RomanianIntentResult(BaseModel):
     confidence: float
     extracted_text: Optional[str] = None
     target_language: Optional[str] = None
+
+class Requirement(BaseModel):
+    id: str
+    description: str
+    category: str
+    severity: str

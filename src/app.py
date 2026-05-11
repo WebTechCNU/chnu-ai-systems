@@ -76,7 +76,7 @@ app = FastAPI(lifespan=lifespan)
 # CORS:
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://webtechcnu.github.io", "http://127.0.0.1:5500", "http://127.0.0.1:5501", "http://127.0.0.1:3000"],  
+    allow_origins=["https://webtechcnu.github.io", "http://127.0.0.1:5500", "http://127.0.0.1:5501", "http://127.0.0.1:3000", "https://maxvonlancaster.github.io"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
