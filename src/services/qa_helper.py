@@ -154,12 +154,12 @@ class WebTester:
         self.llm = llm_client
         self.logger = logging.getLogger(__name__)
     
-    async def test_page(self, url: str) -> BugReport:
+    async def test_page(self, url: str, related_context: str | None = None) -> BugReport:
         # Collect page data
         page_data = await self._extract_page_data(url)
         
         # Analyze with LLM
-        bug_report = await self._analyze_with_llm(page_data, url)
+        bug_report = await self._analyze_with_llm(page_data, url, related_context=related_context)
         
         return bug_report
     
@@ -236,11 +236,15 @@ class WebTester:
         
     #     return console_errors[:20]  # Limit number of errors
     
-    async def _analyze_with_llm(self, page_data: Dict, url: str) -> BugReport:
+    async def _analyze_with_llm(self, page_data: Dict, url: str, related_context: str | None = None) -> BugReport:
         """Use LLM to analyze page issues and create bug report"""
         
+        context_section = related_context if related_context else "No related supporting documents were found."
         prompt = f"""
         Analyze this web page for QA testing purposes:
+        
+        Related documentation and website-specific context:
+        {context_section}
         
         URL: {url}
         Status Code: {page_data.get('status_code')}
@@ -276,14 +280,15 @@ class APITester:
     
     async def test_endpoint(self, url: str, method: str = "GET", 
                            headers: Optional[Dict] = None, 
-                           body: Optional[Dict] = None) -> BugReport:
+                           body: Optional[Dict] = None,
+                           related_context: str | None = None) -> BugReport:
         """Test API endpoint and return bug report"""
         
         # Make the request
         response_data = await self._make_request(url, method, headers, body)
         
         # Analyze with LLM
-        bug_report = await self._analyze_response(url, method, response_data)
+        bug_report = await self._analyze_response(url, method, response_data, related_context=related_context)
         
         return bug_report
     
@@ -318,11 +323,15 @@ class APITester:
                     "success": False
                 }
     
-    async def _analyze_response(self, url: str, method: str, response_data: Dict) -> BugReport:
+    async def _analyze_response(self, url: str, method: str, response_data: Dict, related_context: str | None = None) -> BugReport:
         """Use LLM to analyze API response"""
         
+        related_section = related_context if related_context else "No additional documentation context provided."
         prompt = f"""
         Analyze this API endpoint test result:
+        
+        Related documentation and project context:
+        {related_section}
         
         Endpoint: {method} {url}
         

@@ -14,6 +14,16 @@ class QARequest(BaseModel):
     context: str
     chat_history: list[str]
 
+class QADocument(BaseModel):
+    content: str
+    title: str | None = None
+    source: str | None = None
+    metadata: dict[str, Any] | None = None
+
+class QAIngestionRequest(BaseModel):
+    website: str | None = None
+    documents: list[QADocument]
+
 class MathFacultyRequest(BaseModel):
     question: str
     # context: str
