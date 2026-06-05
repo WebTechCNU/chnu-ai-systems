@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, File, Form
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,13 +14,15 @@ from src.domain.entities import User
 from src.services.ingest import initialize_injestion
 from src.services.ingest_structured import initialize_structured_ingestion
 from src.services.retriever import get_llm_wrapper, get_vector_store, load_vector_store, get_vector_store_buk, get_vector_store_qa, VECTOR_DB_PATH
-from fastapi import Request
 from src.services.rag_chain import query_math_faculty, query_qa, query_romanian_culture
 from src.services.location_service import get_recommendation_from_ai
 from src.infrastructure.constants import TestCase, Topic
 from src.services.validation import validate
 from src.services.search import search_documents, search_with_reranking, multi_query_search
 from src.services.qa_helper import LLMClient, IntentClassifier, WebTester, APITester, LogAnalyzer
+import json
+import io
+import importlib
 from src.services.retrieval_enhanced import retrieve_with_metadata_boost, format_structured_context
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -90,6 +92,31 @@ def inject_documents_into_qa_store(app: FastAPI, documents: list[Document], topi
     os.makedirs(save_path, exist_ok=True)
     vector_store.save_local(save_path)
     return vector_store
+
+
+def parse_uploaded_document(file: UploadFile) -> str:
+    filename = file.filename or "uploaded_document"
+    extension = os.path.splitext(filename)[1].lower()
+
+    if extension == ".txt":
+        raw = file.file.read()
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return raw.decode("latin-1", errors="replace")
+
+    if extension == ".pdf":
+        raw = file.file.read()
+        try:
+            PdfReader = importlib.import_module("PyPDF2").PdfReader
+        except Exception as e:
+            raise ValueError("PDF parsing requires PyPDF2. Install it with `pip install PyPDF2`.") from e
+
+        reader = PdfReader(io.BytesIO(raw))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        return "\n\n".join(pages).strip()
+
+    raise ValueError(f"Unsupported file type: {extension}. Only .pdf and .txt are supported.")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -307,6 +334,57 @@ async def ingest_qa_documents(request_data: QAIngestionRequest, admin: User = De
     }
 
 
+@app.post("/api/qa/documents/upload")
+async def upload_qa_documents(
+    files: list[UploadFile] = File(...),
+    website: str | None = Form(None),
+    source: str | None = Form(None),
+    metadata: str | None = Form(None),
+    admin: User = Depends(require_role("admin"))
+):
+    if not files:
+        return JSONResponse(status_code=400, content={"error": "At least one file must be uploaded."})
+
+    parsed_metadata = {}
+    if metadata:
+        try:
+            parsed_metadata = json.loads(metadata)
+        except Exception:
+            return JSONResponse(status_code=400, content={"error": "Metadata must be valid JSON."})
+
+    document_objects = []
+    for upload in files:
+        try:
+            text = parse_uploaded_document(upload)
+        except ValueError as ve:
+            return JSONResponse(status_code=400, content={"error": str(ve)})
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Failed to parse {upload.filename}: {e}"})
+
+        if not text.strip():
+            continue
+
+        doc_metadata = parsed_metadata.copy()
+        if source:
+            doc_metadata["source"] = source
+        if website:
+            doc_metadata["website"] = website
+        doc_metadata["filename"] = upload.filename
+
+        document_objects.append(Document(page_content=text, metadata=doc_metadata))
+
+    if not document_objects:
+        return JSONResponse(status_code=400, content={"error": "No usable text was extracted from the uploaded files."})
+
+    inject_documents_into_qa_store(app, document_objects)
+    return {
+        "status": "success",
+        "added_documents": len(document_objects),
+        "uploaded_files": [upload.filename for upload in files],
+        "topic": Topic.QA_HELPER.value
+    }
+
+
 @app.post("/api/qa")
 async def qa(request: QARequest, llm_client = Depends(get_llm_wrapper), vector_store = Depends(get_vector_store_qa)):
     """Handle QA requests: analyze content (web/api/logs) and augment with RAG from QA vectorstore.
@@ -367,28 +445,37 @@ async def qa(request: QARequest, llm_client = Depends(get_llm_wrapper), vector_s
             bug_report = await log_analyzer.analyze_logs(log_content)
 
         else:
-            # Unknown intent - let LLM provide a helpful response
+            # Unknown intent - let LLM provide a helpful response.
+            # Include any retrieved QA vector store context to guide the answer.
+            prompt = request.prompt
+            if related_context:
+                prompt = f"{request.prompt}\n\nRelevant QA documents:\n{related_context}"
+
             response = await llm_client.generate(
-                request.prompt,
+                prompt,
                 system_prompt="You are a QA testing assistant. Help the user with testing questions."
             )
-            return {"response": response, "case": "general_help"}
+            return {
+                "response": response,
+                "case": "general_help",
+                "related_context": related_context
+            }
 
         # Step 3: RAG augmentation - query QA vector store if available
-        rag_answer = None
-        try:
-            if vector_store is None:
-                rag_answer = {"status": "skipped", "reason": "QA vector store not available"}
-            else:
-                try:
-                    rag_result = query_qa(request.prompt, request.chat_history, vector_store)
-                    rag_answer = {"status": "success", "answer": rag_result}
-                except Exception as inner_e:
-                    docs = retrieve_with_metadata_boost(request.prompt, vector_store, k=5, score_threshold=0.5)
-                    formatted = format_structured_context(docs)
-                    rag_answer = {"status": "partial", "error": str(inner_e), "context": formatted}
-        except Exception as e:
-            rag_answer = {"status": "failed", "error": str(e)}
+        # rag_answer = None
+        # try:
+        #     if vector_store is None:
+        #         rag_answer = {"status": "skipped", "reason": "QA vector store not available"}
+        #     else:
+        #         try:
+        #             rag_result = query_qa(request.prompt, request.chat_history, vector_store)
+        #             rag_answer = {"status": "success", "answer": rag_result}
+        #         except Exception as inner_e:
+        #             docs = retrieve_with_metadata_boost(request.prompt, vector_store, k=5, score_threshold=0.5)
+        #             formatted = format_structured_context(docs)
+        #             rag_answer = {"status": "partial", "error": str(inner_e), "context": formatted}
+        # except Exception as e:
+        #     rag_answer = {"status": "failed", "error": str(e)}
 
         serialized_reports = []
         if isinstance(bug_report, list):
@@ -407,8 +494,8 @@ async def qa(request: QARequest, llm_client = Depends(get_llm_wrapper), vector_s
             "confidence": intent.confidence,
             "bug_reports": serialized_reports,
             "related_context": related_context,
-            "summary": summary_text,
-            "rag": rag_answer
+            "summary": summary_text
+            # "rag": rag_answer
         }
 
     except Exception as e:

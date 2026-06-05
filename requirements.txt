@@ -21,3 +21,4 @@ pymorphy3-dicts-uk==2.4.1.1.1663094765
 argon2-cffi==25.1.0
 selenium==4.43.0
 httpx==0.28.1
+PyPDF2==3.0.0
